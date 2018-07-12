@@ -98,7 +98,7 @@ class GPUForgetMult(torch.autograd.Function):
     def compile(self):
         if self.ptx is None:
             from pynvrtc.compiler import Program
-            program = Program(kernel.encode(), 'recurrent_forget_mult.cu'.encode())
+            program = Program(kernel.encode('utf-8'), 'recurrent_forget_mult.cu'.encode('utf-8'))
             GPUForgetMult.ptx = program.compile()
 
         if torch.cuda.current_device() not in GPUForgetMult.configured_gpus:
