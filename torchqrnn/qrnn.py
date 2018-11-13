@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.autograd import Variable
 
 if __name__ == '__main__':
     from forget_mult import ForgetMult
@@ -75,14 +74,15 @@ class QRNNLayer(nn.Module):
             Y = Y.view(seq_len, batch_size, 2 * self.hidden_size * self.num_directions)
             Z, F = Y.chunk(2, dim=2)
         ###
-        Z = torch.nn.functional.tanh(Z)
-        F = torch.nn.functional.sigmoid(F)
+        Z = torch.tanh(Z)
+        F = torch.sigmoid(F)
 
         # If zoneout is specified, we perform dropout on the forget gates in F
         # If an element of F is zero, that means the corresponding neuron keeps the old value
         if self.zoneout:
             if self.training:
-                mask = Variable(F.data.new(*F.size()).bernoulli_(1 - self.zoneout), requires_grad=False)
+                mask = F.data.new(*F.size()).bernoulli_(1 - self.zoneout)
+                mask.requires_grad = False
                 F = F * mask
             else:
                 F *= 1 - self.zoneout
@@ -97,7 +97,7 @@ class QRNNLayer(nn.Module):
             F_bwd = F_bwd.contiguous()
             C_bwd = ForgetMult(backwards=True)(F_bwd, Z_bwd, hidden[1] if hidden is not None else None, use_cuda=self.use_cuda)
             if self.output_gate:
-                H_bwd = torch.nn.functional.sigmoid(O_bwd) * C_bwd
+                H_bwd = torch.sigmoid(O_bwd) * C_bwd
             else:
                 H_bwd = C_bwd
 
@@ -111,13 +111,14 @@ class QRNNLayer(nn.Module):
 
         # Apply (potentially optional) output gate
         if self.output_gate:
-            H = torch.nn.functional.sigmoid(O) * C
+            H = torch.sigmoid(O) * C
         else:
             H = C
 
         # In an optimal world we may want to backprop to x_{t-1} but ...
         if self.window > 1 and self.save_prev_x:
-            self.prevX = Variable(X[-1:, :, :].data, requires_grad=False)
+            self.prevX = X[-1:, :, :].data
+            self.prevX.requires_grad = False
 
         if self.num_directions == 2:
             h_n_fwd = C[-1:, :, :]
@@ -196,9 +197,9 @@ if __name__ == '__main__':
     print('Test bidirectional')
     seq_len, batch_size, hidden_size, input_size = 7, 20, 256, 32
     size = (seq_len, batch_size, input_size)
-    X = torch.autograd.Variable(torch.rand(size), requires_grad=True).cuda()
+    X = torch.rand(size).cuda()
     num_layers = 3
-    h = torch.autograd.Variable(torch.rand(num_layers * 2, batch_size, hidden_size).cuda(), requires_grad=True)
+    h = torch.rand(num_layers * 2, batch_size, hidden_size).cuda()
     qrnn = QRNN(input_size, hidden_size, num_layers=num_layers, dropout=0.4, bidirectional=True)
     qrnn.cuda()
     output, hidden = qrnn(X, h)
@@ -208,7 +209,7 @@ if __name__ == '__main__':
     ###
     seq_len, batch_size, hidden_size, input_size = 35, 8, 32, 32
     size = (seq_len, batch_size, input_size)
-    X = Variable(torch.rand(size), requires_grad=True).cuda()
+    X = torch.rand(size).cuda()
 
     qrnn = QRNNLayer(input_size, hidden_size, bidirectional=True)
     qrnn.cuda()
@@ -224,7 +225,7 @@ if __name__ == '__main__':
     from torch.autograd import gradcheck
     seq_len, batch_size, hidden_size, input_size = 4, 8, 16, 16
     size = (seq_len, batch_size, input_size)
-    X = Variable(torch.rand(size), requires_grad=True).cuda()
+    X = torch.rand(size).cuda()
     inputs = [X,]
     # Had to loosen gradient checking, as for forget mult
     test = gradcheck(QRNNLayer(input_size, hidden_size, output_gate=True, bidirectional=True).cuda(), inputs, eps=1e-4, atol=1e-2)
@@ -234,7 +235,7 @@ if __name__ == '__main__':
 
     seq_len, batch_size, hidden_size, input_size = 7, 20, 256, 32
     size = (seq_len, batch_size, input_size)
-    X = torch.autograd.Variable(torch.rand(size), requires_grad=True).cuda()
+    X = torch.rand(size).cuda()
     qrnn = QRNN(input_size, hidden_size, num_layers=2, dropout=0.4)
     qrnn.cuda()
     output, hidden = qrnn(X)
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     seq_len, batch_size, hidden_size = 2, 2, 16
     seq_len, batch_size, hidden_size = 35, 8, 32
     size = (seq_len, batch_size, hidden_size)
-    X = Variable(torch.rand(size), requires_grad=True).cuda()
+    X = torch.rand(size).cuda()
 
     qrnn = QRNNLayer(hidden_size, hidden_size)
     qrnn.cuda()

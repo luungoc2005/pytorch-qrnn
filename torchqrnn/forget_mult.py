@@ -1,6 +1,5 @@
 import math
 import torch
-from torch.autograd import Variable
 from collections import namedtuple
 
 ###
@@ -254,9 +253,9 @@ if __name__ == '__main__':
     seq, batch, hidden = 35, 20, 650
     # Larger input (batch * seq * hidden) results in excessive memory for gradient check
     seq, batch, hidden = 3, 7, 19
-    a      = Variable(torch.rand(seq, batch, hidden).cuda(), requires_grad=True)
-    forget = Variable(torch.rand(seq, batch, hidden).cuda(), requires_grad=True)
-    last_h = Variable(torch.rand(batch, hidden).cuda(), requires_grad=True)
+    a      = torch.rand(seq, batch, hidden).cuda()
+    forget = torch.rand(seq, batch, hidden).cuda()
+    last_h = torch.rand(batch, hidden).cuda()
 
     #seq, batch, hidden = 4, 1, 1
     #a = Variable(torch.Tensor([0.75, 0.5, 0.9, 0.8]).view(seq, batch, hidden).cuda(), requires_grad=True)
