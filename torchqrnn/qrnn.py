@@ -42,6 +42,8 @@ class QRNNLayer(nn.Module):
 
         # One large matmul with concat is faster than N small matmuls and no concat
         self.linear = nn.Linear(self.window * self.input_size, 3 * self.hidden_size * self.num_directions if self.output_gate else 2 * self.hidden_size * self.num_directions)
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
 
     def reset(self):
         # If you are saving the previous value of x, you should call this when starting with a new state
@@ -74,8 +76,8 @@ class QRNNLayer(nn.Module):
             Y = Y.view(seq_len, batch_size, 2 * self.hidden_size * self.num_directions)
             Z, F = Y.chunk(2, dim=2)
         ###
-        Z = torch.tanh(Z)
-        F = torch.sigmoid(F)
+        Z = self.tanh(Z)
+        F = self.sigmoid(F)
 
         # If zoneout is specified, we perform dropout on the forget gates in F
         # If an element of F is zero, that means the corresponding neuron keeps the old value
